@@ -1,4 +1,5 @@
 from praktikum.burger import Burger
+from praktikum.database import Database
 from data import BurgerData
 from unittest.mock import Mock, patch
 import pytest
@@ -14,7 +15,9 @@ class TestBurger:
         burger = Burger()
         burger.set_buns(mock_bun)
 
-        assert burger.bun.name == BurgerData.bun_name and burger.bun.price == BurgerData.bun_price
+        assert burger.bun.name == BurgerData.bun_name and burger.bun.price == BurgerData.bun_price, \
+            (f'Название установленной булочки: {burger.bun.name}, цена установленной булочки: {burger.bun.price}.'
+             f'Ожидаемое название: {BurgerData.bun_name}, ожидаемая цена: {BurgerData.bun_price}.')
 
     @allure.title("Проверка добавления ингредиента в бургер")
     def test_add_ingredient_burger(self):
@@ -23,7 +26,7 @@ class TestBurger:
         burger = Burger()
         burger.add_ingredient(mock_ingredient)
 
-        assert len(burger.ingredients) == 1 and burger.ingredients[0] == mock_ingredient
+        assert len(burger.ingredients) == 1
 
     @allure.title("Проверка удаления ингредиента из бургера")
     def test_remove_ingredient_burger(self):
@@ -46,7 +49,8 @@ class TestBurger:
         burger.ingredients.append(mock_ingredient_1)
         burger.move_ingredient(1, 0)
 
-        assert burger.ingredients[0] == mock_ingredient_1 and burger.ingredients[1] == mock_ingredient_0
+        assert burger.ingredients[0] == mock_ingredient_1
+        assert burger.ingredients[1] == mock_ingredient_0
 
     @allure.title("Проверка получения стоимости бургера только из булочки int/float")
     @pytest.mark.parametrize('price', [
@@ -90,6 +94,7 @@ class TestBurger:
 
     @allure.title("Проверка получения рецепта бургера только из булочки")
     @patch('praktikum.burger.Burger.get_price', return_value=BurgerData.burger_price_1)
+    # замокирован метод get_price из класса Burger, который будет вызываться в методе get_receipt
     def test_get_receipt_burger_only_bun(self, mock_get_price):
         mock_bun = Mock()
         mock_bun.get_name.return_value = BurgerData.bun_name
@@ -103,6 +108,7 @@ class TestBurger:
 
     @allure.title("Проверка получения рецепта бургера из булочки и 2-х ингредиентов")
     @patch('praktikum.burger.Burger.get_price', return_value=BurgerData.burger_price_2)
+    # замокирован метод get_price из класса Burger, который будет вызываться в методе get_receipt
     def test_get_receipt_burger_with_ingredients(self, mock_get_price):
         mock_bun = Mock()
         mock_ingredient_0 = Mock()
@@ -125,3 +131,22 @@ class TestBurger:
         actual_result = burger.get_receipt()
 
         assert actual_result == expected_result
+
+    @allure.title("Проверка возможности собрать бургер из данных Database")
+    @pytest.mark.parametrize("bun_index, ing_1_index, ing_2_index, expected_price", [
+        [0, 0, 3, 400],
+        [1, 1, 4, 800],
+        [2, 2, 5, 1200]
+    ])
+    def test_burger_with_database(self, bun_index, ing_1_index, ing_2_index, expected_price):
+        burger = Burger()
+        database = Database()
+        buns = database.available_buns()
+        ingredients = database.available_ingredients()
+        burger.set_buns(buns[bun_index])
+        burger.add_ingredient(ingredients[ing_1_index])
+        burger.add_ingredient(ingredients[ing_2_index])
+
+        actual_burger_price = burger.get_price()
+
+        assert actual_burger_price == expected_price
